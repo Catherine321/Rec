@@ -1,0 +1,101 @@
+/*!
+ * MindPlus
+ * mpython
+ *
+ */
+#include <MPython.h>
+#include <DFRobot_Iot.h>
+#include <mPython_tinywebdb.h>
+
+// 动态变量
+volatile float mind_n_control, mind_n_score1, mind_n_score2;
+// 函数声明
+void obloqMqttEventT0(String& message);
+void obloqMqttEventT1(String& message);
+void onButtonAPressed();
+void obloqMqttEventT3(String& message);
+void obloqMqttEventT2(String& message);
+void obloqMqttEventT4(String& message);
+void pin27TouchCallback();
+// 静态常量
+const String topics[5] = {"AH-nIduMR","yfEnSOXMg","p1zCe1CMg","MmGCe1jGg","fONkgbjGg"};
+const MsgHandleCb msgHandles[5] = {obloqMqttEventT0,obloqMqttEventT1,obloqMqttEventT2,obloqMqttEventT3,obloqMqttEventT4};
+// 创建对象
+DFRobot_Iot       myIot;
+mPython_TinyWebDB mydb;
+
+
+// 主程序开始
+void setup() {
+	mPython.begin();
+	myIot.setMqttCallback(msgHandles);
+	buttonA.setPressedCallback(onButtonAPressed);
+	touchPadP.setTouchedCallback(pin27TouchCallback);
+	myIot.wifiConnect("DAV", "20150224");
+	while (!myIot.wifiStatus()) {yield();}
+	display.setCursorLine(1);
+	display.printLine("WIFI连接成功");
+	display.setCursorLine(2);
+	display.printLine(myIot.getWiFiLocalIP());
+	myIot.init("iot.dfrobot.com.cn","KvkkSOuGR","","FDkzSOXGRz",topics,1883);
+	myIot.connect();
+	while (!myIot.connected()) {yield();}
+	display.setCursorLine(3);
+	display.printLine("MQTT连接成功");
+	delay(3000);
+	display.fillScreen(0);
+	mydb.setServerParameter("http://tinywebdb.appinventor.space/api", "xieyy","a9a38eff");
+	display.setCursorLine(1);
+	display.printLine("欢迎进入答题系统");
+	display.setCursorLine(2);
+	display.printLine("按A键进行抢答");
+	display.setCursorLine(3);
+	display.printLine("触摸P键查询成绩");
+}
+void loop() {
+
+}
+
+// 事件回调函数
+void obloqMqttEventT0(String& message) {
+	if ((message==String("开始答题"))) {
+		rgb.write(-1, 0x000000);
+		display.fillScreen(0);
+		display.setCursorLine(1);
+		display.printLine("答题开始 请做好准备");
+		mind_n_control = 0;
+	}
+}
+void obloqMqttEventT1(String& message) {
+	display.setCursorLine(3);
+	display.printLine((String(message) + String("请作答")));
+	mind_n_control = 1;
+}
+void onButtonAPressed() {
+	if ((mind_n_control==0)) {
+		myIot.publish(topic_1, "第二组");
+		rgb.write(-1, 0x0000FF);
+	}
+}
+void obloqMqttEventT3(String& message) {
+	display.setCursorLine(3);
+	display.printLine(message);
+}
+void obloqMqttEventT2(String& message) {
+	display.setCursorLine(4);
+	display.printLine(message);
+}
+void obloqMqttEventT4(String& message) {
+	rgb.write(-1, 0x000000);
+	display.setCursorLine(2);
+	display.printLine(message);
+	display.fillInLine(3, 0);
+	display.fillInLine(4, 0);
+	mind_n_control = 0;
+}
+void pin27TouchCallback() {
+	display.setCursorLine(3);
+	display.printLine((String("第一组的分值：") + String(mind_n_score1)));
+	display.setCursorLine(4);
+	display.printLine((String("第二组的分值：") + String(mind_n_score2)));
+}
